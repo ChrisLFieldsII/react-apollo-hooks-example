@@ -12,8 +12,8 @@ export const createUser = gql`
 `;
 
 export const updateUser = gql`
-  mutation updateUser($input: UserUpdateInput!) {
-    updateUser(input: $input) {
+  mutation updateUser($id: ID!, $input: UserUpdateInput!) {
+    updateUser(id: $id, input: $input) {
       ...user
     }
   }
@@ -21,8 +21,8 @@ export const updateUser = gql`
 `;
 
 export const deleteUser = gql`
-  mutation deleteUser($input: UserDeleteInput) {
-    deleteUser(input: $input) {
+  mutation deleteUser($id: ID!) {
+    deleteUser(id: $id) {
       ...user
     }
   }

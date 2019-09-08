@@ -10,13 +10,13 @@ const initClient = () => {
   const httpLink = createHttpLink({ uri: 'http://localhost:4000' });
 
   const errorLink = onError(({ graphQLErrors, networkError, operation, response }) => {
-    console.log(operation, response);
+    console.error(operation, response);
     if (graphQLErrors)
       graphQLErrors.map(({ message, locations, path }) =>
-        console.log(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`),
+        console.error(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`),
       );
 
-    if (networkError) console.log(`[Network error]: ${networkError}`);
+    if (networkError) console.error(`[Network error]: ${networkError}`);
   });
 
   const wsLink = new WebSocketLink({

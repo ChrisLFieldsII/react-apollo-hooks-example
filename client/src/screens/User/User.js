@@ -5,6 +5,7 @@ import {
   Button,
   ButtonGroup,
   Form,
+  Alert,
 } from 'react-bootstrap';
 
 import {listUsers} from '../../gql/queries';
@@ -13,9 +14,11 @@ import {onCreateUser, onUpdateUser, onDeleteUser} from '../../gql/subscriptions'
 
 import './User.css';
 
-function UserForm({stateTuple}) {
+function UserForm({stateTuple, refetch, alertTuple}) {
   const [createUserFn] = useMutation(createUser);
+  const [updateUserFn] = useMutation(updateUser);
   const [formState, setFormState] = stateTuple;
+  const [alertObj, setAlertObj] = alertTuple;
   
   const onFormChange = event => {
     setFormState({...formState, [event.target.name]:event.target.value});
@@ -23,16 +26,49 @@ function UserForm({stateTuple}) {
 
   const {isEdit, showForm, name, age, color='black', user} = formState;
 
-  const addUser = (event) => {
+  const addUser = async (event) => {
     event.preventDefault();
 
-    alert(JSON.stringify({formState,type:'addUser'}, null, 5))
+    try {      
+      const res = await createUserFn({
+        variables:{
+          input:{
+            name,
+            favColor:color,
+            age: Number(age),
+          }
+        }
+      });
+      await refetch(); // REFETCH
+      console.log(res);
+      setAlertObj({showAlert:true, msg:`Successfully created user ${name}!`, variant:'success'});
+    } catch (err) {
+      console.error(err);
+      setAlertObj({showAlert:true, msg:err.message || `Failed to create user ${name}`, variant:'danger'});
+    }
   }
 
-  const editUser = (event) => {
+  const editUser = async (event) => {
     event.preventDefault();
 
-    alert(JSON.stringify({user,type:'updateUser'}, null, 5))
+    console.log('edit user', user)
+    try {
+      const res = await updateUserFn({
+        variables: {
+          id: user.id,
+          input:{
+            name,
+            favColor:color,
+            age: Number(age),
+          }
+        }
+      });
+      console.log(res);
+      setAlertObj({showAlert:true, msg:`Successfully updated user ${name}!`, variant:'success'});        
+    } catch (err) {
+      console.error(err);
+      setAlertObj({showAlert:true, msg:err.message || `Failed to update user ${name}`, variant:'danger'});
+    }
   }
 
   const stopUpdating = () => {
@@ -63,7 +99,7 @@ function UserForm({stateTuple}) {
         {/* Color Input */}
         <Form.Group controlId="color">
           <Form.Label>Color</Form.Label>
-          <Form.Control type="color" name="color" defaultValue={color} value={color} onChange={onFormChange} />
+          <Form.Control type="color" name="color" value={color} onChange={onFormChange} />
           <Form.Text className="text-muted">
             {`Color is ${color}`}
           </Form.Text>
@@ -84,12 +120,19 @@ function UserForm({stateTuple}) {
 
   return (
     <div>
+      {/* Alert */}
+      <Alert show={alertObj.showAlert} variant={alertObj.variant} dismissible onClose={() => setAlertObj({showAlert:false, msg:'',variant:''})}>
+        <p>{alertObj.msg}</p>
+      </Alert>
       {/* Form */}
       {renderForm()}
       {/* Action Buttons */}
       <ButtonGroup>
-        <Button variant="warning" style={{marginTop:1}} onClick={() => setFormState({...formState, showForm:!showForm})}>
+        <Button variant="warning" style={{margin:1}} onClick={() => setFormState({...formState, showForm:!showForm})}>
           {showForm ? 'Hide Form' : 'Show Form'}
+        </Button>
+        <Button variant="info" style={{margin:1}} onClick={() => refetch()}>
+          Refetch
         </Button>
       </ButtonGroup>
     </div>
@@ -98,7 +141,8 @@ function UserForm({stateTuple}) {
 
 
 function User() {
-  const {data, loading} = useQuery(listUsers);
+  const {data, loading, refetch} = useQuery(listUsers, {fetchPolicy:'cache-and-network'});
+  const [alertObj, setAlertObj] = useState({showAlert:false, msg:'',variant:''});
   const [deleteUserFn] = useMutation(deleteUser);
   console.log(loading, data);
 
@@ -108,8 +152,19 @@ function User() {
     setFormState({...formState, isEdit:true, user, name:user.name, age:user.age, color:user.favColor});
   }
 
-  const onClickDelete = user => {
-    alert(JSON.stringify({user,type:'deleteUser'}, null, 5));
+  const onClickDelete = async user => {
+    try {
+      const res = await deleteUserFn({
+        variables:{ id: user.id },
+      });
+  
+      await refetch(); // REFETCH
+      console.log(res);
+      setAlertObj({showAlert:true, msg:`Successfully deleted user ${user.name}`, variant:'success'});
+    } catch (err) {
+      console.error(err);
+      setAlertObj({showAlert:true, msg:`Failed to delete user ${user.name}`, variant:'danger'});
+    }
   }
 
   if (loading) {
@@ -122,12 +177,11 @@ function User() {
 
   return (
     <div className="my-container">
-      {/* <p style={{color:'white'}}>{JSON.stringify({loading, data}, null, 5)}</p> */}
-      <UserForm stateTuple={[formState, setFormState]} />
+      <UserForm stateTuple={[formState, setFormState]} alertTuple={[alertObj, setAlertObj]} refetch={refetch} />
       <div className="my-flex">
         {data.listUsers.map(user => {
           return (
-            <Card bg="light" border="secondary" style={{width: '10vw', margin:'20px'}}>
+            <Card key={user.id} bg="light" border="secondary" style={{width: '10vw', margin:'20px'}}>
               <Card.Header><h4>{`${user.name} - ${user.age}`}</h4></Card.Header>
               <div className="color-container" style={{backgroundColor:user.favColor}}>
                 <span>{user.favColor}</span>
