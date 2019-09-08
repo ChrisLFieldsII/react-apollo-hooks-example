@@ -1,0 +1,20 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "nodemon --watch . index.js",
+    "deploy": "cd ./prisma && prisma deploy",
+    "gen": "cd ./prisma && prisma generate",
+    "admin": "prisma admin",
+    "docker": "docker-compose up -d"
+  },
+  "dependencies": {
+    "graphql-yoga": "^1.18.3",
+    "prisma-client-lib": "^1.34.8"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.2"
+  }
+}

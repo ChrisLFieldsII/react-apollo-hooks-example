@@ -1,0 +1,18 @@
+# import User, UserCreateInput, UserUpdateInput, UserDeleteInput from '../prisma/generated/prisma-schema.graphql'
+
+type Query {
+  getUser(id: ID!): User
+  listUsers: [User!]!
+}
+
+type Mutation {
+  createUser(input: UserCreateInput!): User!
+  updateUser(id: ID!, input: UserUpdateInput!): User
+  deleteUser(id: ID!): User
+}
+
+type Subscription {
+  onCreateUser: User
+  onUpdateUser: User
+  onDeleteUser: User
+}

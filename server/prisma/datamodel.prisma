@@ -1,0 +1,8 @@
+type User {
+  id: ID! @id
+  name: String!
+  age: Int
+  favColor: String
+  createdAt: DateTime! @createdAt
+  updatedAt: DateTime! @updatedAt
+}
