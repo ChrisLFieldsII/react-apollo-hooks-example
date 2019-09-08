@@ -11,11 +11,9 @@ const client = initClient();
 function App() {
   
   return (
-    <div className="App">
-      <ApolloProvider client={client}>
-        <User />
-      </ApolloProvider>
-    </div>
+    <ApolloProvider client={client}>
+      <User />
+    </ApolloProvider>
   );
 }
 
