@@ -7,7 +7,7 @@ import { WebSocketLink } from 'apollo-link-ws';
 import { getMainDefinition } from 'apollo-utilities';
 
 const initClient = () => {
-  const httpLink = createHttpLink({ uri: 'http://localhost:4000' });
+  const httpLink = createHttpLink({ uri: 'http://localhost:4001' });
 
   const errorLink = onError(({ graphQLErrors, networkError, operation, response }) => {
     console.error(operation, response);
@@ -20,7 +20,7 @@ const initClient = () => {
   });
 
   const wsLink = new WebSocketLink({
-    uri: `ws://localhost:4000`,
+    uri: `ws://localhost:4001`,
     options: {
       reconnect: true,
     },
