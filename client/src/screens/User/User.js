@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import {useQuery, useMutation, useSubscription} from '@apollo/react-hooks';
+import React, { useState, useReducer } from 'react';
+import { useQuery, useMutation, useSubscription } from '@apollo/react-hooks';
 import {
   Card,
   Button,
@@ -8,47 +8,53 @@ import {
   Alert,
 } from 'react-bootstrap';
 
-import {listUsers} from '../../gql/queries';
-import {createUser, updateUser, deleteUser} from '../../gql/mutations';
-import {onCreateUser, onUpdateUser, onDeleteUser} from '../../gql/subscriptions';
+import { listUsers } from '../../gql/queries';
+import { createUser, updateUser, deleteUser } from '../../gql/mutations';
+import { onCreateUser, onUpdateUser, onDeleteUser } from '../../gql/subscriptions';
 
 import './User.css';
 
-function UserForm({stateTuple, refetch, alertTuple}) {
-  const [createUserFn] = useMutation(createUser);
-  const [updateUserFn] = useMutation(updateUser);
+function UserForm({ stateTuple, refetch, alertTuple }) {
   const [formState, setFormState] = stateTuple;
   const [alertObj, setAlertObj] = alertTuple;
+
+  const [createUserFn] = useMutation(createUser);
+  const [updateUserFn] = useMutation(updateUser);  
   
   const onFormChange = event => {
-    setFormState({...formState, [event.target.name]:event.target.value});
+    setFormState({ ...formState, [event.target.name]:event.target.value });
   }
 
-  const {isEdit, showForm, name, age, color='black', user} = formState;
+  const { isEdit, showForm, name, age, color='black', user } = formState;
 
-  const addUser = async (event) => {
+  const addUser = async event => {
     event.preventDefault();
+
+    if (!name) {
+      setAlertObj({ showAlert:true, msg:'Must provide name!', variant:'danger' });
+      return;
+    }
 
     try {      
       const res = await createUserFn({
-        variables:{
-          input:{
+        variables: {
+          input: {
             name,
-            favColor:color,
-            age: Number(age),
+            favColor: color,
+            age: Math.round(Number(age)),
           }
         }
       });
-      await refetch(); // REFETCH
-      console.log(res);
-      setAlertObj({showAlert:true, msg:`Successfully created user ${name}!`, variant:'success'});
+      await refetch();
+      console.log('Create User Response:', res);
+      setAlertObj({ showAlert: true, msg: `Successfully created user ${name}!`, variant: 'success' });
     } catch (err) {
       console.error(err);
-      setAlertObj({showAlert:true, msg:err.message || `Failed to create user ${name}`, variant:'danger'});
+      setAlertObj({ showAlert: true, msg: err.message || `Failed to create user ${name}`, variant: 'danger' });
     }
   }
 
-  const editUser = async (event) => {
+  const editUser = async event => {
     event.preventDefault();
 
     console.log('edit user', user)
@@ -59,7 +65,7 @@ function UserForm({stateTuple, refetch, alertTuple}) {
           input:{
             name,
             favColor:color,
-            age: Number(age),
+            age: Math.round(Number(age)),
           }
         }
       });
@@ -72,7 +78,7 @@ function UserForm({stateTuple, refetch, alertTuple}) {
   }
 
   const stopUpdating = () => {
-    setFormState({...formState, isEdit:false, user:null, name:'', age:'', color:'black'})
+    setFormState({ ...formState, isEdit:false, user:null, name:'', age:'', color:'black' })
   }
 
   const renderForm = () => {
@@ -80,7 +86,7 @@ function UserForm({stateTuple, refetch, alertTuple}) {
     if (!showForm) return null;
 
     return (
-      <Form style={{backgroundColor:'white'}}>
+      <Form style={{ backgroundColor:'white' }}>
         {/* Name Input */}
         <Form.Group controlId="name">
           <Form.Label>Name</Form.Label>
@@ -93,7 +99,7 @@ function UserForm({stateTuple, refetch, alertTuple}) {
         {/* Age Input */}
         <Form.Group controlId="age">
           <Form.Label>Age</Form.Label>
-          <Form.Control type="number" placeholder="26" name="age" value={age} onChange={onFormChange} />
+          <Form.Control type="number" step={1} placeholder="26" name="age" value={age ? Math.round(Number(age)) : ''} onChange={onFormChange} />
         </Form.Group>
 
         {/* Color Input */}
@@ -139,14 +145,59 @@ function UserForm({stateTuple, refetch, alertTuple}) {
   )
 }
 
+const handleUserOnData = ({ client, subscriptionData:{data} }, refetch) => {
+
+  
+  /** Commented out to show logic could possibly do but we'll just refetch
+   * in which case we're really better off polling!!
+   */
+  // const res = client.readQuery({
+  //   query: listUsers
+  // });
+
+  // const [key] = Object.keys(data);
+  // switch (key) {
+  //   case 'onCreateUser':
+  //     console.log('onCreateUser', data);
+  //     res.listUsers.filter(user => user.id !== data.onCreateUser.id).concat(data.onCreateUser);
+  //     break;
+  //   case 'onUpdateUser':
+  //     console.log('onUpdateUser', data);
+  //     res.listUsers.filter(user => user.id !== data.onUpdateUser.id).concat(data.onUpdateUser);
+  //     break;
+  //   case 'onDeleteUser':
+  //     console.warn('onDeleteUser subscriptions returns null... Possible bug??');
+  //     break;
+  //   default:
+  //     break;
+  // }
+
+  // client.writeQuery({
+  //   query: listUsers,
+  //   data: res,
+  // });
+  
+  refetch();
+}
+
 
 function User() {
-  const {data, loading, refetch} = useQuery(listUsers, {fetchPolicy:'cache-and-network'});
   const [alertObj, setAlertObj] = useState({showAlert:false, msg:'',variant:''});
-  const [deleteUserFn] = useMutation(deleteUser);
-  console.log(loading, data);
+  const [formState, setFormState] = useState({showForm:true, isEdit:false, user:null});
 
-  const [formState, setFormState] = useState({showForm:true, isEdit:false, user:null});  
+  const {data, loading, refetch} = useQuery(listUsers, {fetchPolicy:'cache-and-network'});
+  
+  const [deleteUserFn] = useMutation(deleteUser);
+
+  const onCreateUserObj = useSubscription(onCreateUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
+  const onUpdateUserObj = useSubscription(onUpdateUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
+  const onDeleteUserObj = useSubscription(onDeleteUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
+
+  // console.log('subscription onCreateUser', onCreateUserObj);
+  // console.log('subscription onUpdateUser', onUpdateUserObj);
+  // console.log('subscription onDeleteUser', onDeleteUserObj);
+  // console.log(loading, data);
+
   
   const onClickEdit = (user) => {
     setFormState({...formState, isEdit:true, user, name:user.name, age:user.age, color:user.favColor});
@@ -158,7 +209,7 @@ function User() {
         variables:{ id: user.id },
       });
   
-      await refetch(); // REFETCH
+      await refetch();
       console.log(res);
       setAlertObj({showAlert:true, msg:`Successfully deleted user ${user.name}`, variant:'success'});
     } catch (err) {
@@ -177,12 +228,16 @@ function User() {
 
   return (
     <div className="my-container">
+      {/* User Form */}
       <UserForm stateTuple={[formState, setFormState]} alertTuple={[alertObj, setAlertObj]} refetch={refetch} />
+      {/* Mapping of User Cards */}
       <div className="my-flex">
         {data.listUsers.map(user => {
           return (
-            <Card key={user.id} bg="light" border="secondary" style={{width: '10vw', margin:'20px'}}>
-              <Card.Header><h4>{`${user.name} - ${user.age}`}</h4></Card.Header>
+            <Card key={user.id} bg="light" border="secondary" style={{width: '250px', margin:'20px'}}>
+              <Card.Header>
+                <h4>{`${user.name} - ${user.age || '∞'}`}</h4>
+              </Card.Header>
               <div className="color-container" style={{backgroundColor:user.favColor}}>
                 <span>{user.favColor}</span>
               </div>
