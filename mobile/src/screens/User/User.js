@@ -54,16 +54,24 @@ const userFormStyles = StyleSheet.create({
   },
 })
 
-function UserForm({ stateTuple, setIsRenderForm }) {
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [color, setColor] = useState(INITIAL_COLOR);
-  // const [formState, setFormState] = stateTuple;
+function UserForm({ initUser, closeForm }) {
+  const isUpdate = !!initUser.name; // if name is truthy, its an update
+  const [name, setName] = useState(initUser.name || '');
+  const [age, setAge] = useState(String(initUser.age || ''));
+  const [color, setColor] = useState(initUser.color || INITIAL_COLOR);
 
   const [createUserFn] = useMutation(createUser);
   const [updateUserFn] = useMutation(updateUser);  
 
-  const onColorChangeComplete = color => setColor(colorsys.hsv2Hex(color.h, color.s, color.v));
+  const onColorChangeComplete = color => {
+    let hexColor = INITIAL_COLOR;
+    try {
+      hexColor = colorsys.hsv2Hex(color.h, color.s, color.v);
+    } catch (err) {
+      console.error('onColorChangeComplete error::', err);
+    }
+    setColor(hexColor);
+  };
 
   const doCreateUser = async () => {
     if (!name) {
@@ -72,11 +80,11 @@ function UserForm({ stateTuple, setIsRenderForm }) {
     }  
 
     try {
-      const {data} = await createUserFn({
+      const { data } = await createUserFn({
         variables: {
           input: {
             name: name.trim(),
-            age: parseInt(age),
+            age: age === '0' ? parseInt(age) : parseInt(age || 0) || null,
             favColor: color,
           }
         }
@@ -90,33 +98,54 @@ function UserForm({ stateTuple, setIsRenderForm }) {
     }
   }
 
+  const doUpdateUser = async () => {
+    try {
+      const { data } = await updateUserFn({
+        variables: {
+          id: initUser.id,
+          input: {
+            name: name.trim(),
+            age: age === '0' ? parseInt(age) : parseInt(age || 0) || null,
+            favColor: color,
+          }
+        }
+      });
+
+      console.log('update user data', data);
+      alert(`Successfully updated user ${name}!`);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error occurred updating user');
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* This btn helps dismiss the keyboard when pressing anywhere */}
       <TouchableOpacity activeOpacity={1} onPress={Keyboard.dismiss} style={styles.container}>
         <KeyboardAvoidingView style={styles.container} behavior="padding" enabled>
-          <TouchableOpacity style={{margin:20}} onPress={() => setIsRenderForm(false)}>
-            <Text style={{color:COLORS.BLUE}}>Go Back</Text>
+          <TouchableOpacity style={{ margin: 20 }} onPress={closeForm}>
+            <Text style={{ color: COLORS.BLUE }}>Go Back</Text>
           </TouchableOpacity>
           <View style={userFormStyles.formContainer}>
-            <Text>Name <Text style={{color:'red'}}>*</Text></Text>
+            <Text>Name <Text style={{ color: 'red' }}>*</Text></Text>
             <TextInput value={name} style={userFormStyles.textInput} placeholder="Sgt. Slaughter *" onChangeText={text => setName(text)} />
           </View>
           <View style={userFormStyles.formContainer}>
             <Text>Age</Text>
             <TextInput value={age} keyboardType="number-pad" style={userFormStyles.textInput} placeholder="26" onChangeText={text => setAge(text)} />
           </View>
-          <Text>{color}</Text>
+          <Text>Color is {color}</Text>
           <View style={userFormStyles.colorwheelContainer}>
             <ColorWheel
-              initialColor={INITIAL_COLOR}
-              onColorChange={color => console.log({color})}
+              initialColor={color}
+              // onColorChange={color => console.log({color})}
               onColorChangeComplete={onColorChangeComplete}
-              // style={userFormStyles.colorwheelContainer}
               thumbStyle={userFormStyles.colorwheelThumb}
             />
           </View>
-          <TouchableOpacity style={userFormStyles.submitBtn} onPress={doCreateUser}>
-            <Text style={{color:'white'}}>Create User</Text>
+          <TouchableOpacity style={userFormStyles.submitBtn} onPress={isUpdate ? doUpdateUser : doCreateUser}>
+            <Text style={{ color: 'white' }}>{isUpdate ? 'Update User' : 'Create User'}</Text>
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </TouchableOpacity>
@@ -191,8 +220,30 @@ function renderListEmpty() {
   );
 }
 
-function renderUser({ item: user }) {
-  return <UserCard user={user} />;
+// go to the UserForm screen which uses initUser to determine whether its a create or update
+function doUpdateUser(user, setRenderFormObj) {
+  setRenderFormObj({ isRenderForm: true, initUser: { id: user.id, name: user.name, color: user.favColor, age: user.age } });
+}
+
+async function doDeleteUser(user, deleteUserFn) {
+
+  try {
+    const {data} = await deleteUserFn({
+      variables: {
+        id: user.id,
+      }
+    });
+
+    console.log('delete user data', data);
+    alert(`Successfully deleted user ${user.name}!`);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Error occurred deleting User');
+  }
+}
+
+function renderUser({ item: user }, setRenderFormObj, deleteUserFn) {
+  return <UserCard user={user} doUpdate={() => doUpdateUser(user, setRenderFormObj)} doDelete={() => doDeleteUser(user, deleteUserFn)} />;
 }
 
 function renderLoading() {
@@ -212,14 +263,23 @@ function renderError() {
 }
 
 function User() {
-  const [isRenderForm, setIsRenderForm] = useState(false);
+  const [renderFormObj, setRenderFormObj] = useState({ isRenderForm: false, initUser: {} });
 
   const {data, loading, refetch, error} = useQuery(listUsers, {fetchPolicy:'cache-and-network'});
+  const [deleteUserFn] = useMutation(deleteUser);
   useSubscription(onCreateUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
   useSubscription(onUpdateUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
   useSubscription(onDeleteUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
 
-  if (isRenderForm) return <UserForm setIsRenderForm={setIsRenderForm} />;
+  function closeForm() {
+    setRenderFormObj({ isRenderForm: false, initUser: {} });
+  }
+
+  function openForm() {
+    setRenderFormObj({ isRenderForm: true, initUser: {} });
+  }
+
+  if (renderFormObj.isRenderForm) return <UserForm closeForm={closeForm} initUser={renderFormObj.initUser} />;
 
   if (loading) return renderLoading();
 
@@ -233,13 +293,13 @@ function User() {
     <SafeAreaView style={[styles.container]}>
       <View style={[userStyles.header]}>
         <Text style={{fontSize:28, fontWeight:'bold'}}>{`${users.length} Users`}</Text>
-        <TouchableOpacity onPress={() => setIsRenderForm(true)} style={[styles.center, userStyles.addUserBtn]}>
+        <TouchableOpacity onPress={openForm} style={[styles.center, userStyles.addUserBtn]}>
           <Text style={{color:'white'}}>Add User</Text>
         </TouchableOpacity>
       </View>
       <FlatList 
         data={users}
-        renderItem={renderUser}
+        renderItem={renderArg => renderUser(renderArg, setRenderFormObj, deleteUserFn)}
         keyExtractor={user => user.id}
         onRefresh={refetch}
         refreshing={loading}
@@ -274,8 +334,8 @@ const cardStyles = StyleSheet.create({
 
 function UserCard({
   user={},
-  onEdit=noop,
-  onDelete=noop,
+  doUpdate=noop,
+  doDelete=noop,
 }) {
   const width = (getWidth() / NUM_COLUMNS) - (CARD_MARGIN * 2);
   const height = getHeight();
@@ -284,7 +344,7 @@ function UserCard({
     <View style={[cardStyles.container]}>
       {/* Header */}
       <View style={[styles.center, { backgroundColor: 'rgba(0,0,0,.03)', height: height * CARD_HEIGHT_PERCENTAGE * 0.25 }]}>
-        <Text style={cardStyles.header}>{`${user.name} - ${user.age}`}</Text>
+        <Text style={cardStyles.header}>{`${user.name} - ${user.age === 0 ? 0 : user.age ? user.age : '∞'}`}</Text>
       </View>
       {/* Color Block */}
       <View style={[styles.center, {backgroundColor:user.favColor, height: height * CARD_HEIGHT_PERCENTAGE * 0.6}]}>
@@ -292,10 +352,12 @@ function UserCard({
       </View>
       {/* Action Btn Block */}
       <View style={[cardStyles.btnContainer]}>
-        <TouchableOpacity style={[styles.center, { borderColor: COLORS.BLUE, borderRadius:4, borderWidth:1, width: (width / 2)-1, height: height * CARD_HEIGHT_PERCENTAGE * 0.15 }]}>
-          <Text style={{ color:COLORS.BLUE }}>Edit</Text>
+        {/* Update Btn */}
+        <TouchableOpacity onPress={doUpdate} style={[styles.center, { borderColor: COLORS.BLUE, borderRadius:4, borderWidth:1, width: (width / 2)-1, height: height * CARD_HEIGHT_PERCENTAGE * 0.15 }]}>
+          <Text style={{ color:COLORS.BLUE }}>Update</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.center, { borderColor: COLORS.RED, borderRadius:4, borderWidth:1, width: (width / 2)-1, height: height * CARD_HEIGHT_PERCENTAGE * 0.15 }]}>
+        {/* Delete Btn */}
+        <TouchableOpacity onPress={doDelete} style={[styles.center, { borderColor: COLORS.RED, borderRadius:4, borderWidth:1, width: (width / 2)-1, height: height * CARD_HEIGHT_PERCENTAGE * 0.15 }]}>
           <Text style={{ color:COLORS.RED }}>Delete</Text>
         </TouchableOpacity>
       </View>
