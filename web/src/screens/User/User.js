@@ -25,7 +25,7 @@ function UserForm({ stateTuple, refetch, alertTuple }) {
     setFormState({ ...formState, [event.target.name]:event.target.value });
   }
 
-  const { isEdit, showForm, name, age, color='black', user } = formState;
+  const { isUpdate, showForm, name, age, color='#000000', user } = formState;
 
   const addUser = async event => {
     event.preventDefault();
@@ -54,10 +54,9 @@ function UserForm({ stateTuple, refetch, alertTuple }) {
     }
   }
 
-  const editUser = async event => {
+  const doUpdateUser = async event => {
     event.preventDefault();
 
-    console.log('edit user', user)
     try {
       const res = await updateUserFn({
         variables: {
@@ -78,7 +77,7 @@ function UserForm({ stateTuple, refetch, alertTuple }) {
   }
 
   const stopUpdating = () => {
-    setFormState({ ...formState, isEdit:false, user:null, name:'', age:'', color:'black' })
+    setFormState({ ...formState, isUpdate:false, user:null, name:'', age:'', color:'#000000' })
   }
 
   const renderForm = () => {
@@ -113,10 +112,10 @@ function UserForm({ stateTuple, refetch, alertTuple }) {
 
         {/* Action Buttons */}
         <ButtonGroup>
-          <Button variant="primary" type="submit" onClick={isEdit ? editUser : addUser}>
-            {isEdit ? 'Update User' : 'Create User'}
+          <Button variant="primary" type="submit" onClick={isUpdate ? doUpdateUser : addUser}>
+            {isUpdate ? 'Update User' : 'Create User'}
           </Button>
-          {isEdit && (
+          {isUpdate && (
             <Button variant="outline-danger" onClick={stopUpdating}>Stop Updating</Button>
           )}
         </ButtonGroup>
@@ -145,9 +144,7 @@ function UserForm({ stateTuple, refetch, alertTuple }) {
   )
 }
 
-const handleUserOnData = ({ client, subscriptionData:{data} }, refetch) => {
-
-  
+const handleUserOnData = ({ client, subscriptionData:{data} }, refetch) => {  
   /** Commented out to show logic could possibly do but we'll just refetch
    * in which case we're really better off polling!!
    */
@@ -182,39 +179,33 @@ const handleUserOnData = ({ client, subscriptionData:{data} }, refetch) => {
 
 
 function User() {
-  const [alertObj, setAlertObj] = useState({showAlert:false, msg:'',variant:''});
-  const [formState, setFormState] = useState({showForm:true, isEdit:false, user:null});
+  const [alertObj, setAlertObj] = useState({ showAlert: false, msg: '', variant: '' });
+  const [formState, setFormState] = useState({ showForm: true, isUpdate: false, user: null });
 
-  const {data, loading, refetch} = useQuery(listUsers, {fetchPolicy:'cache-and-network'});
+  const {data, loading, refetch} = useQuery(listUsers, { fetchPolicy:'cache-and-network' });
   
   const [deleteUserFn] = useMutation(deleteUser);
 
-  const onCreateUserObj = useSubscription(onCreateUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
-  const onUpdateUserObj = useSubscription(onUpdateUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
-  const onDeleteUserObj = useSubscription(onDeleteUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
-
-  // console.log('subscription onCreateUser', onCreateUserObj);
-  // console.log('subscription onUpdateUser', onUpdateUserObj);
-  // console.log('subscription onDeleteUser', onDeleteUserObj);
-  // console.log(loading, data);
-
+  useSubscription(onCreateUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
+  useSubscription(onUpdateUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
+  useSubscription(onDeleteUser, { onSubscriptionData: data => handleUserOnData(data, refetch) });
   
-  const onClickEdit = (user) => {
-    setFormState({...formState, isEdit:true, user, name:user.name, age:user.age, color:user.favColor});
+  const onClickUpdate = user => {
+    setFormState({ ...formState, isUpdate: true, user, name: user.name, age: user.age, color: user.favColor });
   }
 
   const onClickDelete = async user => {
     try {
       const res = await deleteUserFn({
-        variables:{ id: user.id },
+        variables: { id: user.id },
       });
   
       await refetch();
       console.log(res);
-      setAlertObj({showAlert:true, msg:`Successfully deleted user ${user.name}`, variant:'success'});
+      setAlertObj({ showAlert:true, msg: `Successfully deleted user ${user.name}`, variant: 'success' });
     } catch (err) {
       console.error(err);
-      setAlertObj({showAlert:true, msg:`Failed to delete user ${user.name}`, variant:'danger'});
+      setAlertObj({ showAlert: true, msg: `Failed to delete user ${user.name}`, variant:'danger' });
     }
   }
 
@@ -242,7 +233,7 @@ function User() {
                 <span>{user.favColor}</span>
               </div>
               <ButtonGroup>
-                <Button variant="outline-primary" onClick={() => onClickEdit(user)}>Edit</Button>
+                <Button variant="outline-primary" onClick={() => onClickUpdate(user)}>Update</Button>
                 <Button variant="outline-danger" onClick={() => onClickDelete(user)}>Delete</Button>
               </ButtonGroup>
             </Card>
