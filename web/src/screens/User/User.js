@@ -227,7 +227,7 @@ function User() {
           return (
             <Card key={user.id} bg="light" border="secondary" style={{width: '250px', margin:'20px'}}>
               <Card.Header>
-                <h4>{`${user.name} - ${user.age || '∞'}`}</h4>
+                <h4>{`${user.name} - ${user.age === 0 ? 0 : user.age ? user.age : '∞'}`}</h4>
               </Card.Header>
               <div className="color-container" style={{backgroundColor:user.favColor}}>
                 <span>{user.favColor}</span>
