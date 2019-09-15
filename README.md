@@ -10,7 +10,7 @@ This repo contains examples of:
 
 GraphQL server powered by [Prisma](https://www.prisma.io/) which includes support for subscriptions out-of-the-box!
 
-So far it just includes queries/mutations/subscriptions for one data type: `User`
+So far it just includes `queries/mutations/subscriptions` for one data type: `User`
 
 There are no APIs used, no auth, so the backend is fairly simple.
 
@@ -26,7 +26,9 @@ Allows creating/updating/deleting of Users with `subscriptions` so other Users g
 
 Files located in [`web/src/screens/User/`](web/src/screens/User/User.js)
 
-Web UI [img](web_ui.png)
+Web UI Images
+
+- [User List with Add/Edit Form](web_ui.png)
 
 ## Mobile
 
@@ -36,7 +38,7 @@ Allows creating/updating/deleting of Users with `subscriptions` so other Users g
 
 Files located in [`mobile/src/screens/User`](mobile/src/screens/User/User.js)
 
-Mobile UI
+Mobile UI Images
 
 - [User List](mobile_ui_1.png)
 - [Add/Edit User Form](mobile_ui_2.png)
