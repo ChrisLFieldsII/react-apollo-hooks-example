@@ -20,6 +20,23 @@ There are no APIs used, no auth, so the backend is fairly simple.
 
 ## Web
 
-A web frontend created with [create-react-app](https://create-react-app.dev/)
+A web frontend created with [create-react-app](https://create-react-app.dev/) which uses the `react-apollo` pkg to make requests to the server.
+
+Allows creating/updating/deleting of Users with `subscriptions` so other Users get notified.
+
+Files located in [`web/src/screens/User/`](web/src/screens/User/User.js)
 
 Web UI [img](web_ui.png)
+
+## Mobile
+
+A `React Native` app created with `react-native init` which uses the `react-apollo` pkg to make requests to the server.
+
+Allows creating/updating/deleting of Users with `subscriptions` so other Users get notified.
+
+Files located in [`mobile/src/screens/User`](mobile/src/screens/User/User.js)
+
+Mobile UI
+
+- [User List](mobile_ui_1.png)
+- [Add/Edit User Form](mobile_ui_2.png)
