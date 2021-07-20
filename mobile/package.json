@@ -18,7 +18,7 @@
     "graphql": "^14.5.4",
     "graphql-tag": "^2.10.1",
     "react": "16.8.6",
-    "react-native": "0.60.5",
+    "react-native": "0.62.3",
     "react-native-color-wheel": "https://github.com/telldus/react-native-color-wheel.git",
     "subscriptions-transport-ws": "^0.9.16"
   },
